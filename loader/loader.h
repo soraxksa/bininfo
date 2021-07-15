@@ -76,9 +76,9 @@ public:
 	{
 	}
 	
-	Section* get_text_section(){
+	Section* get_section(const std::string &sec_name){
 		for(auto &s : sections)
-			if(s.name == ".text")
+			if(s.name == sec_name)
 				return &s;
 		return NULL;
 	}
