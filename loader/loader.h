@@ -2,6 +2,7 @@
 #define LOADER_H
 
 #include <stdint.h>
+#include <bfd.h>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,14 @@ public:
 	{
 	}
 
+	Symbol(Symbol::SymbolType type, std::string name, uint64_t addr):
+		type(type),
+		name(name),
+		addr(addr)
+	{
+	}
+         
+
 	SymbolType type;
 	std::string name;
 	uint64_t addr;
@@ -36,13 +45,32 @@ public:
 		SEC_TYPE_DATA = 2
 	};
 
-	Section():
-		binary(NULL),
-		type(SEC_TYPE_NONE),
-		vma(0),
-		size(0),
-		bytes(NULL)
+	Section(Binary *bin, std::string name, Section::SectionType type, uint64_t vma, uint64_t size, uint8_t *bytes):
+		binary(bin),
+		name(name),
+		type(type),
+		vma(vma),
+		size(size),
+		bytes(bytes)
 	{
+	}
+
+	~Section()
+	{
+		if(bytes)
+			free(bytes);
+	}
+
+	Section(Section &&other)
+	{
+		this->binary = other.binary;
+		this->name = other.name;
+		this->type = other.type;
+		this->vma = other.vma;
+		this->size = other.size;
+		this->bytes = other.bytes;
+
+		other.bytes = NULL;
 	}
 
 	bool contains(uint64_t addr) {return (addr >= vma) && (addr-vma < size);}
@@ -68,13 +96,73 @@ public:
 		ARCH_X84  = 1
 	};
 
-	Binary():
+	Binary(const std::string &filename):
+		filename(filename),
 		type(BIN_TYPE_AUTO),
 		arch(ARCH_NONE),
 		bits(0),
 		entry(0)
 	{
+		bfd *bfd_h = open_bfd(filename);
+		
+		if(!bfd_h)
+		{
+			exit(-1);
+		}
+
+		this->entry = bfd_get_start_address(bfd_h);
+		this->type_str = std::string(bfd_h->xvec->name);
+
+		switch(bfd_h->xvec->flavour)
+		{
+			case bfd_target_elf_flavour:
+				this->type = Binary::BIN_TYPE_ELF;
+				break;
+			case bfd_target_coff_flavour:
+				this->type = Binary::BIN_TYPE_PE;
+				break;
+			case bfd_target_unknown_flavour:
+			default:
+				fprintf(stderr, "unsupported binary type (%s)\n", bfd_h->xvec->name);
+				exit(-1);
+		}
+
+		const bfd_arch_info_type *bfd_info = bfd_get_arch_info(bfd_h);
+		this->arch_str = std::string(bfd_info->printable_name);
+
+		switch(bfd_info->mach)
+		{
+			case bfd_mach_i386_i386:
+				this->arch = Binary::ARCH_X84;
+				this->bits = 32;
+				break;
+			case bfd_mach_x86_64:
+				this->arch = Binary::ARCH_X84;
+				this->bits = 64;
+				break;
+			default:
+				fprintf(stderr, "unsupported architecture (%s)\n", bfd_info->printable_name);
+				exit(-1);
+		}
+
+		load_symbols_bfd(bfd_h);
+		
+	        load_dynsym_bfd(bfd_h);
+
+		
+		if(load_sections_bfd(bfd_h) < 0)
+		{
+			exit(-1);
+		}
+		
+
+		if(bfd_h)
+			bfd_close(bfd_h);
+		
+
 	}
+
+
 	
 	Section* get_section(const std::string &sec_name){
 		for(auto &s : sections)
@@ -92,10 +180,14 @@ public:
 	uint64_t             entry;
 	std::vector<Section> sections;
 	std::vector<Symbol>  symbols;
-};
 
-int load_binary(std::string &fname, Binary *bin, Binary::BinaryType type);
-void unload_binary(Binary *bin);
+
+private:
+	void load_symbols_bfd(bfd *bfd_h);
+	void load_dynsym_bfd(bfd *bfd_h);
+	int load_sections_bfd(bfd *bfd_h);
+	bfd* open_bfd(const std::string &filename);
+};
 
 
 #endif

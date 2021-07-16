@@ -1,4 +1,5 @@
 #include "memory.h"
+#include <stdlib.h>
 
 
 
@@ -18,7 +19,7 @@ void dump_file(const char *filename){
 }
 
 
-void dump(const char *data_buffer, size_t length, uint64_t addr = 0) 
+void dump(const char *data_buffer, size_t length, uint64_t addr /* = 0*/) 
 {   
 	for(int i=0; i < length; i++) 
 	{
@@ -53,7 +54,7 @@ void dump(const char *data_buffer, size_t length, uint64_t addr = 0)
 	}  
 }  
 
-
+/*
 char* file_to_bin(const char *filename)
 {
 	FILE *fd = fopen(filename, "rb");
@@ -76,5 +77,6 @@ char* file_to_bin(const char *filename)
 
 
 }
+*/
 
 
