@@ -48,10 +48,22 @@ Usage:
 	if(bin.symbols.size() > 0)
 	{
 		printf("scanned symbol tables\n");
-		for(int i = 0; i < bin.symbols.size(); i++)
+		for(auto &p : bin.symbols)
 		{
-			Symbol *sym = &bin.symbols[i];
-			printf(" %-40s 0x%016jx %s\n", sym->name.c_str(), sym->addr, (sym->type & Symbol::SYM_TYPE_FUNC) ? "FUNC" : "");
+			Symbol &sym = p.second;
+			const char *sym_type = NULL;
+			switch(sym.type)
+			{
+				case Symbol::SYM_TYPE_FUNC:
+					sym_type = "FUNC";
+					break;
+				case Symbol::SYM_TYPE_OBJECT:
+					sym_type = "OBJECT";
+					break;
+				default:
+					sym_type = "UNKNOWN";
+			}
+			printf(" %-40s 0x%016jx %s\n", sym.name.c_str(), sym.addr, sym_type);
 		}
 	}
 

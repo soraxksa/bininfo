@@ -5,6 +5,7 @@
 #include <bfd.h>
 #include <string>
 #include <vector>
+#include <map>
 
 class Binary;
 class Section;
@@ -14,7 +15,9 @@ class Symbol{
 public:
 	enum SymbolType{
 		SYM_TYPE_UKN  = 0,
-		SYM_TYPE_FUNC = 1
+		SYM_TYPE_FUNC = 1,
+		SYM_TYPE_OBJECT = 2,
+		SYM_TYPE_FILE   = 3
 	};
 
 	Symbol():
@@ -179,7 +182,7 @@ public:
 	uint32_t             bits;
 	uint64_t             entry;
 	std::vector<Section> sections;
-	std::vector<Symbol>  symbols;
+	std::map<const char *, Symbol>  symbols;
 
 
 private:
@@ -187,6 +190,7 @@ private:
 	void load_dynsym_bfd(bfd *bfd_h);
 	int load_sections_bfd(bfd *bfd_h);
 	bfd* open_bfd(const std::string &filename);
+	void add_symbols(asymbol **bfd_symtab, size_t nsyms); 
 };
 
 

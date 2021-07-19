@@ -1,6 +1,8 @@
 #include <bfd.h>
 #include <stdio.h>
 #include "loader.h"
+#include <map>
+#include <set>
 
 
 
@@ -66,14 +68,7 @@ void Binary::load_symbols_bfd(bfd *bfd_h)
 		exit(-1);
 	}
 
-	for(int i = 0; i < nsyms; i++)
-	{
-		if(bfd_symtab[i]->flags & BSF_FUNCTION)
-		{
-			this->symbols.push_back(Symbol(Symbol::SYM_TYPE_FUNC, bfd_symtab[i]->name, bfd_asymbol_value(bfd_symtab[i])));
-		}
-	}
-
+	add_symbols(bfd_symtab, nsyms);
 	if(bfd_symtab)
 		free(bfd_symtab);
 }
@@ -99,13 +94,7 @@ void Binary::load_dynsym_bfd(bfd *bfd_h)
 		exit(-1);
 	}
 
-	for(int i = 0; i < nsyms; i++)
-	{
-		if(bfd_dynsym[i]->flags & BSF_FUNCTION)
-		{
-			this->symbols.push_back(Symbol(Symbol::SYM_TYPE_FUNC, bfd_dynsym[i]->name, bfd_asymbol_value(bfd_dynsym[i])));
-		}
-	}
+	add_symbols(bfd_dynsym, nsyms);
 
 	if(bfd_dynsym)
 		free(bfd_dynsym);
@@ -149,4 +138,43 @@ int Binary::load_sections_bfd(bfd *bfd_h)
 	return 1;
 }
 
+void Binary::add_symbols(asymbol **bfd_symtab, size_t nsyms)
+{
+ 	std::set<const char *> weak_sym;
+
+	for(int i = 0; i < nsyms; i++)
+	{
+		if(bfd_symtab[i]->flags & BSF_WEAK)
+		{
+			weak_sym.insert(bfd_symtab[i]->name);
+		}
+		else if(bfd_symtab[i]->flags & BSF_FUNCTION)
+		{       if(weak_sym.find(bfd_symtab[i]->name) != weak_sym.end())
+			{
+				Symbol symbol = Symbol(Symbol::SYM_TYPE_FUNC, bfd_symtab[i]->name, bfd_asymbol_value(bfd_symtab[i]));
+				weak_sym.erase(bfd_symtab[i]->name);
+				this->symbols.erase(bfd_symtab[i]->name);
+				this->symbols[bfd_symtab[i]->name] = std::move(symbol);
+
+			}else{
+				Symbol func = Symbol(Symbol::SYM_TYPE_FUNC, bfd_symtab[i]->name, bfd_asymbol_value(bfd_symtab[i]));
+				this->symbols[bfd_symtab[i]->name] = std::move(func);
+			}
+		}else if(bfd_symtab[i]->flags & BSF_OBJECT)
+		{
+			if(weak_sym.find(bfd_symtab[i]->name) != weak_sym.end())
+			{
+				Symbol symbol = Symbol(Symbol::SYM_TYPE_OBJECT, bfd_symtab[i]->name, bfd_asymbol_value(bfd_symtab[i]));
+				weak_sym.erase(bfd_symtab[i]->name);
+				this->symbols.erase(bfd_symtab[i]->name);
+				this->symbols[bfd_symtab[i]->name] = std::move(symbol);
+
+			}else{
+				Symbol symbol = Symbol(Symbol::SYM_TYPE_OBJECT, bfd_symtab[i]->name, bfd_asymbol_value(bfd_symtab[i]));
+				this->symbols[bfd_symtab[i]->name] = std::move(symbol);
+			} 
+		}
+	}
+ 
+}
 
