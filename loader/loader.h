@@ -168,11 +168,13 @@ public:
 
 	
 	Section* get_section(const std::string &sec_name){
-		for(auto &s : sections)
+	        for(auto &s : sections)
 			if(s.name == sec_name)
 				return &s;
 		return NULL;
 	}
+
+	void disas(const char *section_name);
 
 	std::string          filename;
 	BinaryType           type;

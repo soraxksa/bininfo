@@ -3,7 +3,7 @@
 #include "loader.h"
 #include <map>
 #include <set>
-
+#include <capstone/capstone.h>
 
 
 
@@ -178,3 +178,43 @@ void Binary::add_symbols(asymbol **bfd_symtab, size_t nsyms)
  
 }
 
+
+void Binary::disas(const char *section_name)
+{
+	
+	Section *sec = this->get_section(section_name);
+	if(sec == NULL)
+	{
+		printf("the binary does not have a section:%d\n", section_name);
+		exit(-1);
+	}
+
+	csh dis;
+	if(cs_open(CS_ARCH_X86, CS_MODE_64, &dis) != CS_ERR_OK)
+	{
+		printf("Failed to open Capstone\n");
+		exit(-1);
+	}
+
+	cs_insn *insns;
+	size_t n = cs_disasm(dis, sec->bytes, sec->size, sec->vma, 0, &insns);
+        if(n <= 0)
+	{
+		printf("Disassembly error: %s\n", cs_strerror(cs_errno(dis)));
+		exit(-1);
+	}
+
+
+	for(size_t i = 0; i < n; i++)
+	{
+		printf("0x%016jx: ", insns[i].address);
+		for(size_t j = 0; j < 16; j++) {
+			if(j < insns[i].size) printf("%02x ", insns[i].bytes[j]);
+			else printf("   ");
+		}
+                printf("%-12s %s\n", insns[i].mnemonic, insns[i].op_str);
+	}
+
+	cs_free(insns, n);
+	cs_close(&dis);
+}

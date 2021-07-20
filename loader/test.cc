@@ -9,12 +9,14 @@ static const char* section_name = NULL;
 
 static const char* binary_name = NULL;
 
+static bool disas_arg = false;
+
 int main(int argc, char **argv)
 {
 	if(argc < 2){
 Usage:
-		printf("Usage: %s [-s <section name>] <binary>\n", argv[0]);
-		return 1;
+		printf("Usage: %s [-d {for disassembling a given section}] [-s <section name> {-s all to dump every section}] <binary>\n", argv[0]);
+		return -1;
 	}
 
 	int ar_index;
@@ -27,8 +29,19 @@ Usage:
 				ar_index++;
 				section_name = argv[ar_index];
 				break;
+			case 'd':
+				disas_arg = true;
+				break;
+
 
 		}
+	}
+
+	//check args logic
+	if(disas_arg && !section_arg)
+	{
+		printf("Error: no section was given for disassembling\n");
+		return -1;
 	}
 
 	argv += ar_index;
@@ -66,8 +79,11 @@ Usage:
 			printf(" %-40s 0x%016jx %s\n", sym.name.c_str(), sym.addr, sym_type);
 		}
 	}
-
-	if(section_arg)
+        if(section_arg && disas_arg)
+	{
+		bin.disas(section_name);
+	}
+	else if(section_arg)
 	{
 		if(strcmp(section_name, "all") == 0)
 		{
