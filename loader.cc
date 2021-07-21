@@ -208,10 +208,12 @@ void Binary::disas(const char *section_name)
 	for(size_t i = 0; i < n; i++)
 	{
 		printf("0x%016jx: ", insns[i].address);
+		/*
 		for(size_t j = 0; j < 16; j++) {
 			if(j < insns[i].size) printf("%02x ", insns[i].bytes[j]);
 			else printf("   ");
 		}
+		*/
                 printf("%-12s %s\n", insns[i].mnemonic, insns[i].op_str);
 	}
 
