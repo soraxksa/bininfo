@@ -2,5 +2,6 @@
 
 
 
-all:memory.cc main.cc
-	g++ memory.cc main.cc -fpermissive 
+
+all:
+	g++ -std=c++17 loader.cc test.cc ../memory.cc -o loader -lbfd -lcapstone -fpermissive 
